@@ -18,6 +18,10 @@ const io = new Server(server, {
   cors: {
     origin: "*",
   },
+  
+});
+app.get("/", (req, res) => {
+  res.send("TexThing server is running 🚀");
 });
 
 socketHandler(io);
