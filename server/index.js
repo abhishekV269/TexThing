@@ -5,6 +5,8 @@ import cors from "cors";
 import socketHandler from "./socket.js";
 import connectDB from "./config/db.js";
 
+const PORT = process.env.PORT || 5000;
+
 connectDB();
 
 const app = express();
@@ -20,6 +22,6 @@ const io = new Server(server, {
 
 socketHandler(io);
 
-server.listen(5000, () => {
-  console.log("TexThing server running on port 5000");
+server.listen(PORT, () => {
+  console.log(`TexThing server running on port ${PORT}`);
 });
