@@ -1,3 +1,4 @@
+import socket from "../../socket";
 import React, { useState, useEffect, useRef } from "react";
 import {
   View,
@@ -9,9 +10,6 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
-import { io } from "socket.io-client";
-
-const socket = io("http://10.7.232.216:5000"); // keep your IP
 
 export default function ChatScreen() {
   const [username, setUsername] = useState("");
@@ -20,14 +18,20 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState<any[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
   const [typingUser, setTypingUser] = useState("");
+
   const flatListRef = useRef<any>(null);
 
   useEffect(() => {
-    socket.on("receive_message", (data) => {
-      setMessages((prev) => [...prev, data]);
-    });
+    const handleHistory = (history: any[]) => {
+      console.log("CHAT HISTORY:", history);
+      setMessages(history || []);
+    };
 
-    socket.on("system_message", (msg) => {
+    const handleReceive = (data: any) => {
+      setMessages((prev) => [...prev, data]);
+    };
+
+    const handleSystem = (msg: string) => {
       setMessages((prev) => [
         ...prev,
         {
@@ -36,19 +40,34 @@ export default function ChatScreen() {
           message: msg,
         },
       ]);
-    });
+    };
 
-    socket.on("typing", (user) => {
+    const handleTyping = (user: string) => {
       setTypingUser(user);
 
       setTimeout(() => {
         setTypingUser("");
       }, 1500);
-    });
+    };
 
-    socket.on("online_users", (users) => {
+    const handleOnlineUsers = (users: string[]) => {
       setOnlineUsers(users);
-    });
+    };
+
+    socket.on("chat_history", handleHistory);
+    socket.on("receive_message", handleReceive);
+    socket.on("system_message", handleSystem);
+    socket.on("typing", handleTyping);
+    socket.on("online_users", handleOnlineUsers);
+
+    // CLEANUP (VERY IMPORTANT)
+    return () => {
+      socket.off("chat_history", handleHistory);
+      socket.off("receive_message", handleReceive);
+      socket.off("system_message", handleSystem);
+      socket.off("typing", handleTyping);
+      socket.off("online_users", handleOnlineUsers);
+    };
   }, []);
 
   const joinChat = () => {
@@ -57,6 +76,7 @@ export default function ChatScreen() {
     if (username.trim() === "") return;
 
     socket.emit("user_joined", username);
+    socket.emit("get_history");
 
     setJoined(true);
   };
@@ -76,8 +96,6 @@ export default function ChatScreen() {
 
     socket.emit("send_message", msgData);
 
-    
-
     setMessage("");
   };
 
@@ -93,8 +111,8 @@ export default function ChatScreen() {
           <TextInput
             placeholder="Enter username"
             value={username}
-            onChangeText={setUsername}
             style={styles.joinInput}
+            onChangeText={setUsername}
           />
 
           <TouchableOpacity style={styles.joinButton} onPress={joinChat}>
@@ -108,6 +126,7 @@ export default function ChatScreen() {
           <Text style={styles.onlineUsers}>
             Online: {onlineUsers.join(" • ")}
           </Text>
+
           {typingUser !== "" && (
             <Text style={styles.typing}>{typingUser} is typing...</Text>
           )}
@@ -115,7 +134,7 @@ export default function ChatScreen() {
           <FlatList
             ref={flatListRef}
             data={messages}
-            keyExtractor={(item, index) => item.id + index}
+            keyExtractor={(item, index) => index.toString()}
             onContentSizeChange={() =>
               flatListRef.current?.scrollToEnd({ animated: true })
             }
@@ -179,6 +198,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
 
+  typing: {
+    fontSize: 12,
+    color: "#888",
+    marginBottom: 4,
+  },
+
   joinContainer: {
     flex: 1,
     justifyContent: "center",
@@ -210,11 +235,6 @@ const styles = StyleSheet.create({
   joinButtonText: {
     color: "#fff",
     fontWeight: "bold",
-  },
-  typing: {
-    fontSize: 12,
-    color: "#888",
-    marginBottom: 4,
   },
 
   myMessage: {
@@ -263,17 +283,21 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
+    backgroundColor: "#ffffff",
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    fontSize: 16,
     borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
-    borderRadius: 6,
+    borderColor: "#ddd",
   },
 
   sendButton: {
+    backgroundColor: "#007AFF",
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
     marginLeft: 10,
-    backgroundColor: "#3b6ef5",
-    padding: 12,
-    borderRadius: 6,
   },
 
   sendText: {

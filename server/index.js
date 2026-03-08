@@ -1,9 +1,14 @@
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
-import chatSocket from "./sockets/chatsocket.js";
+import cors from "cors";
+import socketHandler from "./socket.js";
+import connectDB from "./config/db.js";
+
+connectDB();
 
 const app = express();
+app.use(cors());
 
 const server = http.createServer(app);
 
@@ -13,7 +18,7 @@ const io = new Server(server, {
   },
 });
 
-chatSocket(io);
+socketHandler(io);
 
 server.listen(5000, () => {
   console.log("TexThing server running on port 5000");
